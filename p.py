@@ -133,8 +133,8 @@ def process_accounts():
         else:
             print(Fore.RED + "Gagal mengautentikasi akun.")
 
-        # Delay of 5 seconds before the next account
-        time.sleep(5)
+        # Delay of 150 seconds before the next account
+        time.sleep(150)
         
     # Start a countdown for 1 day
     start_countdown(24 * 60 * 60)
