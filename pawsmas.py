@@ -108,13 +108,11 @@ def process_accounts():
                         quest_id = quest["_id"]
                         title = quest["title"]
                         claimed = quest["progress"]["claimed"]
-                        status = quest["progress"]["status"]
-                        available_when = quest.get("availableWhen", 0)
 
                         print(Fore.CYAN + f"\nQuest: {title}")
 
-                        current_time = int(time.time() * 1000)
-                        if status == "start" and not claimed and available_when <= current_time:
+                        # Fokus hanya pada `claimed == False`
+                        if not claimed:
                             complete_result = complete_quest(auth_token, quest_id)
                             if complete_result and complete_result.get("success"):
                                 print(Fore.GREEN + "Quest berhasil diselesaikan.")
@@ -128,7 +126,7 @@ def process_accounts():
                             else:
                                 print(Fore.RED + "Gagal menyelesaikan quest.")
                         else:
-                            print(Fore.YELLOW + "Quest tidak tersedia atau sudah diklaim.")
+                            print(Fore.YELLOW + "Quest sudah diklaim.")
                     else:
                         # Break the while loop if no quests were processed
                         break
