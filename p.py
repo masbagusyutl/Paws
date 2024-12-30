@@ -38,25 +38,14 @@ def authenticate_user(account_data):
         "Content-Type": "application/json",
         "Accept": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        # add other necessary headers here
     }
     return api_request(url, method="POST", headers=headers, data=payload)
-
-def get_user_data(auth_token):
-    url = "https://api.paws.community/v1/user"
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Accept": "application/json",
-        # add other necessary headers here
-    }
-    return api_request(url, method="GET", headers=headers)
 
 def get_quests(auth_token):
     url = "https://api.paws.community/v1/quests/list"
     headers = {
         "Authorization": f"Bearer {auth_token}",
         "Accept": "application/json",
-        # add other necessary headers here
     }
     return api_request(url, method="GET", headers=headers)
 
@@ -66,7 +55,6 @@ def complete_quest(auth_token, quest_id):
     headers = {
         "Authorization": f"Bearer {auth_token}",
         "Content-Type": "application/json",
-        # add other necessary headers here
     }
     return api_request(url, method="POST", headers=headers, data=payload)
 
@@ -77,7 +65,6 @@ def claim_quest(auth_token, quest_id):
         "Authorization": f"Bearer {auth_token}",
         "Content-Type": "application/json",
         "Accept": "application/json",
-        # Add any additional headers if needed
     }
     return api_request(url, method="POST", headers=headers, data=payload)
 
@@ -85,26 +72,30 @@ def process_accounts():
     accounts = load_accounts()
     total_accounts = len(accounts)
     print(Fore.YELLOW + f"Jumlah akun: {total_accounts}")
-    
+
     for idx, account in enumerate(accounts, start=1):
         print(Fore.YELLOW + f"\nMemproses akun ke-{idx} dari {total_accounts}")
         response = authenticate_user(account)
-        
+
         if response and response.get("success"):
             auth_token = response["data"][0]
-            user_data = get_user_data(auth_token)
+            user_info = response["data"][1]
+
+            # Extract user data from authentication response
+            username = user_info["userData"].get("username", "N/A")
+            wallet = user_info["userData"].get("wallet", "N/A")
+            solana_wallet = user_info["userData"].get("solanaWallet", "N/A")
+            balance = user_info["gameData"].get("balance", 0)
+
+            print(Fore.GREEN + "Data Pengguna:")
+            print(Fore.CYAN + f"  Nama Pengguna : {username}")
+            print(Fore.CYAN + f"  Ton Wallet    : {wallet}")
+            print(Fore.CYAN + f"  Solana Wallet : {solana_wallet}")
+            print(Fore.CYAN + f"  Balance       : {balance}")
+
             quests = get_quests(auth_token)
 
-            if user_data and quests:
-                # Extracting essential user data
-                user_info = user_data["data"]
-                print(Fore.GREEN + "Data Pengguna:")
-                print(Fore.CYAN + f"  Nama Pengguna  : {user_info['userData']['username']}")
-                print(Fore.CYAN + f"  Balance        : {user_info['gameData']['balance']}")
-                print(Fore.CYAN + f"  Balance Hari Ini: {user_info['gameData']['todayBalance']}")
-                print(Fore.CYAN + f"  Premium Status : {'Yes' if user_info['allocationData']['telegram']['premium'] else 'No'}")
-                print(Fore.CYAN + f"  Alokasi Total  : {user_info['allocationData']['total']}")
-
+            if quests:
                 for quest in quests["data"]:
                     quest_id = quest["_id"]
                     title = quest["title"]
@@ -112,15 +103,12 @@ def process_accounts():
                     claimed = quest["progress"]["claimed"]
 
                     print(Fore.CYAN + f"\nQuest: {title} - {description}")
-                    
-                    # Check if the quest is unclaimed and can be completed
+
                     if not claimed:
-                        # Attempt to complete the quest first
                         complete_result = complete_quest(auth_token, quest_id)
                         if complete_result and complete_result.get("success"):
                             print(Fore.GREEN + "Quest berhasil diselesaikan.")
-                            
-                            # After completion, attempt to claim the quest
+
                             claim_result = claim_quest(auth_token, quest_id)
                             if claim_result and claim_result.get("success"):
                                 print(Fore.GREEN + "Quest berhasil diklaim.")
@@ -135,7 +123,7 @@ def process_accounts():
 
         # Delay of 150 seconds before the next account
         time.sleep(150)
-        
+
     # Start a countdown for 1 day
     start_countdown(24 * 60 * 60)
 
@@ -146,7 +134,7 @@ def start_countdown(seconds):
         remaining_time = end_time - datetime.now()
         print(Fore.YELLOW + f"Sisa waktu: {remaining_time}", end="\r")
         time.sleep(1)
-    
+
     print(Fore.GREEN + "Hitung mundur selesai. Memulai ulang proses.")
     process_accounts()  # Restart the process
 
