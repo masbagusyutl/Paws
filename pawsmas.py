@@ -41,14 +41,6 @@ def authenticate_user(account_data):
     }
     return api_request(url, method="POST", headers=headers, data=payload)
 
-def get_user_data(auth_token):
-    url = "https://api.paws.community/v1/user"
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Accept": "application/json",
-    }
-    return api_request(url, method="GET", headers=headers)
-
 def get_quests(auth_token):
     url = "https://api.paws.community/v1/quests/list?type=christmas"
     headers = {
@@ -87,49 +79,49 @@ def process_accounts():
 
         if response and response.get("success"):
             auth_token = response["data"][0]
-            user_data = get_user_data(auth_token)
+            user_data = response["data"][1]
 
-            if user_data:
-                user_info = user_data["data"]
-                print(Fore.GREEN + "Data Pengguna:")
-                print(Fore.CYAN + f"  Nama Pengguna  : {user_info['userData']['username']}")
-                print(Fore.CYAN + f"  Jumlah Referral: {user_info['referralData']['referralsCount']}")
-                print(Fore.CYAN + f"  Balance        : {user_info['gameData']['balance']}")
-                print(Fore.CYAN + f"  Balance Hari Ini: {user_info['gameData']['todayBalance']}")
-                print(Fore.CYAN + f"  Premium Status : {'Yes' if user_info['allocationData']['telegram']['premium'] else 'No'}")
-                print(Fore.CYAN + f"  Alokasi Total  : {user_info['allocationData']['total']}")
+            username = user_data["userData"].get("username", "N/A")
+            wallet = user_data["userData"].get("wallet", "N/A")
+            solana_wallet = user_data["userData"].get("solanaWallet", "N/A")
+            balance = user_data["gameData"].get("balance", 0)
 
-                while True:
-                    quests = get_quests(auth_token)
-                    if not quests:
-                        break
+            print(Fore.GREEN + "Data Pengguna:")
+            print(Fore.CYAN + f"  Nama Pengguna  : {username}")
+            print(Fore.CYAN + f"  Ton Wallet     : {wallet}")
+            print(Fore.CYAN + f"  Solana Wallet  : {solana_wallet}")
+            print(Fore.CYAN + f"  Balance        : {balance}")
 
-                    for quest in quests["data"]:
-                        quest_id = quest["_id"]
-                        title = quest["title"]
-                        claimed = quest["progress"]["claimed"]
+            while True:
+                quests = get_quests(auth_token)
+                if not quests or "data" not in quests:
+                    break
 
-                        print(Fore.CYAN + f"\nQuest: {title}")
+                quest_processed = False
+                for quest in quests["data"]:
+                    quest_id = quest["_id"]
+                    title = quest["title"]
+                    claimed = quest["progress"]["claimed"]
 
-                        # Fokus hanya pada `claimed == False`
-                        if not claimed:
-                            complete_result = complete_quest(auth_token, quest_id)
-                            if complete_result and complete_result.get("success"):
-                                print(Fore.GREEN + "Quest berhasil diselesaikan.")
-                                claim_result = claim_quest(auth_token, quest_id)
-                                if claim_result and claim_result.get("success"):
-                                    print(Fore.GREEN + "Quest berhasil diklaim.")
-                                    # Refresh the quest list to check for new available quests
-                                    break
-                                else:
-                                    print(Fore.RED + "Gagal mengklaim quest.")
+                    print(Fore.CYAN + f"\nQuest: {title}")
+
+                    if not claimed:
+                        complete_result = complete_quest(auth_token, quest_id)
+                        if complete_result and complete_result.get("success"):
+                            print(Fore.GREEN + "Quest berhasil diselesaikan.")
+                            claim_result = claim_quest(auth_token, quest_id)
+                            if claim_result and claim_result.get("success"):
+                                print(Fore.GREEN + "Quest berhasil diklaim.")
+                                quest_processed = True
                             else:
-                                print(Fore.RED + "Gagal menyelesaikan quest.")
+                                print(Fore.RED + "Gagal mengklaim quest.")
                         else:
-                            print(Fore.YELLOW + "Quest sudah diklaim.")
+                            print(Fore.RED + "Gagal menyelesaikan quest.")
                     else:
-                        # Break the while loop if no quests were processed
-                        break
+                        print(Fore.YELLOW + "Quest sudah diklaim.")
+                
+                if not quest_processed:
+                    break
         else:
             print(Fore.RED + "Gagal mengautentikasi akun.")
 
